@@ -71,3 +71,37 @@ type nopReplayDetector struct{}
 func (s *nopReplayDetector) Check(uint64) (func(), bool) {
 	return func() {}, true
 }
+
+// SRTPEncryption enables SRTP encryption.
+func SRTPEncryption() ContextOption { // nolint:revive
+	return func(c *Context) error {
+		c.encryptSRTP = true
+		return nil
+	}
+}
+
+// SRTPNoEncryption disables SRTP encryption.
+// This option is useful when you want to use NullCipher for SRTP and keep authentication only.
+func SRTPNoEncryption() ContextOption { // nolint:revive
+	return func(c *Context) error {
+		c.encryptSRTP = false
+		return nil
+	}
+}
+
+// SRTCPEncryption enables SRTCP encryption.
+func SRTCPEncryption() ContextOption {
+	return func(c *Context) error {
+		c.encryptSRTCP = true
+		return nil
+	}
+}
+
+// SRTCPNoEncryption disables SRTCP encryption.
+// This option is useful when you want to use NullCipher for SRTCP and keep authentication only.
+func SRTCPNoEncryption() ContextOption {
+	return func(c *Context) error {
+		c.encryptSRTCP = false
+		return nil
+	}
+}
