@@ -21,10 +21,17 @@ type srtpCipherAeadAesGcm struct {
 	srtpCipher, srtcpCipher cipher.AEAD
 
 	srtpSessionSalt, srtcpSessionSalt []byte
+
+	encryptSRTP  bool
+	encryptSRTCP bool
 }
 
-func newSrtpCipherAeadAesGcm(profile ProtectionProfile, masterKey, masterSalt []byte) (*srtpCipherAeadAesGcm, error) {
-	s := &srtpCipherAeadAesGcm{ProtectionProfile: profile}
+func newSrtpCipherAeadAesGcm(profile ProtectionProfile, masterKey, masterSalt []byte, encryptSRTP, encryptSRTCP bool) (*srtpCipherAeadAesGcm, error) {
+	s := &srtpCipherAeadAesGcm{
+		ProtectionProfile: profile,
+		encryptSRTP:       encryptSRTP,
+		encryptSRTCP:      encryptSRTCP,
+	}
 
 	srtpSessionKey, err := aesCmKeyDerivation(labelSRTPEncryption, masterKey, masterSalt, 0, len(masterKey))
 	if err != nil {
