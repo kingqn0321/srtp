@@ -23,10 +23,11 @@ Simplified structure of SRTCP Packets:
 const (
 	maxSRTCPIndex = 0x7FFFFFFF
 
-	srtcpHeaderSize     = 8
 	srtcpIndexSize      = 4
 	srtcpEncryptionFlag = 0x80
 )
+
+const srtcpHeaderSize = 8
 
 func (c *Context) decryptRTCP(dst, encrypted []byte) ([]byte, error) {
 	authTagLen, err := c.cipher.AuthTagRTCPLen()
@@ -63,7 +64,9 @@ func (c *Context) decryptRTCP(dst, encrypted []byte) ([]byte, error) {
 		}
 	}
 
-	out, err := cipher.decryptRTCP(dst, encrypted, index, ssrc)
+	out := allocateIfMismatch(dst, encrypted)
+
+	out, err = cipher.decryptRTCP(out, encrypted, index, ssrc)
 	if err != nil {
 		return nil, err
 	}

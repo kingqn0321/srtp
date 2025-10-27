@@ -37,3 +37,24 @@ func isSameBuffer(a, b []byte) bool {
 
 	return aPtr == bPtr
 }
+
+func allocateIfMismatch(dst, src []byte) []byte {
+	if dst == nil {
+		dst = make([]byte, len(src))
+		copy(dst, src)
+	} else if !isSameBuffer(dst, src) {
+		extraNeeded := len(src) - len(dst)
+		if extraNeeded > 0 {
+			dst = append(dst, make([]byte, extraNeeded)...)
+		} else if extraNeeded < 0 {
+			dst = dst[:len(dst)+extraNeeded]
+		}
+
+		copy(dst, src)
+	} else if len(dst) != len(src) {
+		dst = dst[:0]
+		dst = append(dst, src...)
+	}
+
+	return dst
+}
