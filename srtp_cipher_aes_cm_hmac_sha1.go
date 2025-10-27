@@ -84,9 +84,14 @@ func (s *srtpCipherAesCmHmacSha1) encryptRTP(dst []byte, header *rtp.Header, pay
 	}
 
 	// Encrypt the payload
-	counter := generateCounter(header.SequenceNumber, roc, header.SSRC, s.srtpSessionSalt)
-	if err = xorBytesCTR(s.srtpBlock, counter[:], dst[n:], payload); err != nil {
-		return nil, err
+	if s.ProtectionProfile == ProtectionProfileNullHmacSha1_32 || s.ProtectionProfile == ProtectionProfileNullHmacSha1_80 {
+		// NULL cipher: just copy payload without encryption
+		copy(dst[n:], payload)
+	} else {
+		counter := generateCounter(header.SequenceNumber, roc, header.SSRC, s.srtpSessionSalt)
+		if err = xorBytesCTR(s.srtpBlock, counter[:], dst[n:], payload); err != nil {
+			return nil, err
+		}
 	}
 	n += len(payload)
 
@@ -127,26 +132,40 @@ func (s *srtpCipherAesCmHmacSha1) decryptRTP(dst, ciphertext []byte, header *rtp
 	copy(dst, ciphertext[:headerLen])
 
 	// Decrypt the ciphertext for the payload.
-	counter := generateCounter(header.SequenceNumber, roc, header.SSRC, s.srtpSessionSalt)
-	err = xorBytesCTR(
-		s.srtpBlock, counter[:], dst[headerLen:], ciphertext[headerLen:],
-	)
-	return dst, err
+	if s.ProtectionProfile == ProtectionProfileNullHmacSha1_32 || s.ProtectionProfile == ProtectionProfileNullHmacSha1_80 {
+		// NULL cipher: just copy payload without decryption
+		copy(dst[headerLen:], ciphertext[headerLen:])
+	} else {
+		counter := generateCounter(header.SequenceNumber, roc, header.SSRC, s.srtpSessionSalt)
+		err = xorBytesCTR(
+			s.srtpBlock, counter[:], dst[headerLen:], ciphertext[headerLen:],
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return dst, nil
 }
 
 func (s *srtpCipherAesCmHmacSha1) encryptRTCP(dst, decrypted []byte, srtcpIndex uint32, ssrc uint32) ([]byte, error) {
 	dst = allocateIfMismatch(dst, decrypted)
 
 	// Encrypt everything after header
-	counter := generateCounter(uint16(srtcpIndex&0xffff), srtcpIndex>>16, ssrc, s.srtcpSessionSalt)
-	if err := xorBytesCTR(s.srtcpBlock, counter[:], dst[8:], dst[8:]); err != nil {
-		return nil, err
+	if s.ProtectionProfile == ProtectionProfileNullHmacSha1_32 || s.ProtectionProfile == ProtectionProfileNullHmacSha1_80 {
+		// NULL cipher: skip encryption
+		// Add SRTCP Index without Encryption bit
+		dst = append(dst, make([]byte, 4)...)
+		binary.BigEndian.PutUint32(dst[len(dst)-4:], srtcpIndex)
+	} else {
+		counter := generateCounter(uint16(srtcpIndex&0xffff), srtcpIndex>>16, ssrc, s.srtcpSessionSalt)
+		if err := xorBytesCTR(s.srtcpBlock, counter[:], dst[8:], dst[8:]); err != nil {
+			return nil, err
+		}
+		// Add SRTCP Index and set Encryption bit
+		dst = append(dst, make([]byte, 4)...)
+		binary.BigEndian.PutUint32(dst[len(dst)-4:], srtcpIndex)
+		dst[len(dst)-4] |= 0x80
 	}
-
-	// Add SRTCP Index and set Encryption bit
-	dst = append(dst, make([]byte, 4)...)
-	binary.BigEndian.PutUint32(dst[len(dst)-4:], srtcpIndex)
-	dst[len(dst)-4] |= 0x80
 
 	authTag, err := s.generateSrtcpAuthTag(dst)
 	if err != nil {
@@ -173,10 +192,18 @@ func (s *srtpCipherAesCmHmacSha1) decryptRTCP(out, encrypted []byte, index, ssrc
 		return nil, errFailedToVerifyAuthTag
 	}
 
-	counter := generateCounter(uint16(index&0xffff), index>>16, ssrc, s.srtcpSessionSalt)
-	err = xorBytesCTR(s.srtcpBlock, counter[:], out[8:], out[8:])
+	// Check if the packet is encrypted by examining the E bit
+	isEncrypted := encrypted[tailOffset]&0x80 != 0
+	if isEncrypted {
+		counter := generateCounter(uint16(index&0xffff), index>>16, ssrc, s.srtcpSessionSalt)
+		err = xorBytesCTR(s.srtcpBlock, counter[:], out[8:], out[8:])
+		if err != nil {
+			return nil, err
+		}
+	}
+	// For NULL cipher or unencrypted packets, data is already copied
 
-	return out, err
+	return out, nil
 }
 
 func (s *srtpCipherAesCmHmacSha1) generateSrtpAuthTag(buf []byte, roc uint32) ([]byte, error) {
