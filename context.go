@@ -56,6 +56,9 @@ type Context struct {
 
 	newSRTCPReplayDetector func() replaydetector.ReplayDetector
 	newSRTPReplayDetector  func() replaydetector.ReplayDetector
+
+	encryptSRTP  bool
+	encryptSRTCP bool
 }
 
 // CreateContext creates a new SRTP Context.
@@ -89,9 +92,9 @@ func CreateContext(masterKey, masterSalt []byte, profile ProtectionProfile, opts
 
 	switch profile {
 	case ProtectionProfileAeadAes128Gcm, ProtectionProfileAeadAes256Gcm:
-		c.cipher, err = newSrtpCipherAeadAesGcm(profile, masterKey, masterSalt)
-	case ProtectionProfileAes128CmHmacSha1_32, ProtectionProfileAes128CmHmacSha1_80:
-		c.cipher, err = newSrtpCipherAesCmHmacSha1(profile, masterKey, masterSalt)
+		c.cipher, err = newSrtpCipherAeadAesGcm(profile, masterKey, masterSalt, c.encryptSRTP, c.encryptSRTCP)
+	case ProtectionProfileAes128CmHmacSha1_32, ProtectionProfileAes128CmHmacSha1_80, ProtectionProfileNullHmacSha1_32, ProtectionProfileNullHmacSha1_80:
+		c.cipher, err = newSrtpCipherAesCmHmacSha1(profile, masterKey, masterSalt, c.encryptSRTP, c.encryptSRTCP)
 	default:
 		return nil, fmt.Errorf("%w: %#v", errNoSuchSRTPProfile, profile)
 	}
@@ -103,6 +106,8 @@ func CreateContext(masterKey, masterSalt []byte, profile ProtectionProfile, opts
 		[]ContextOption{ // Default options
 			SRTPNoReplayProtection(),
 			SRTCPNoReplayProtection(),
+			SRTPEncryption(),
+			SRTCPEncryption(),
 		},
 		opts..., // User specified options
 	) {

@@ -1,0 +1,103 @@
+# Historical Comments and Reviews
+
+## Discussion Comments
+
+**@kingqn0321** (Oct 27, 07:08)
+@xgopilot 根据tag v2.0.18创建分支base-v2.0.18
+
+---
+
+**@xgopilot** (Oct 27, 07:08)
+### Task Completed ✅
+
+Successfully created branch `base-v2.0.18` from tag `v2.0.18` and pushed it to remote.
+
+The branch is now available at: https://github.com/kingqn0321/srtp/tree/base-v2.0.18
+
+---
+
+**@kingqn0321** (Oct 27, 07:15)
+@xgopilot 根据主分支的实现，在分支上base-v2.0.18增加支持srtp不加密的实现（Added support for NULL ciphers），务必保证不引入无关的代码，也不能遗漏代码，更不能更改代码框架
+
+---
+
+**@xgopilot** (Oct 27, 07:15)
+### ✅ NULL Cipher Support Implementation Complete
+
+**Task**: Add support for SRTP without encryption (NULL ciphers) based on main branch implementation to base-v2.0.18
+
+#### Summary
+Successfully implemented NULL cipher support (`ProtectionProfileNullHmacSha1_80` and `ProtectionProfileNullHmacSha1_32`) for SRTP on the base-v2.0.18 branch.
+
+#### Changes Made
+1. **protection_profile.go** - Added NULL cipher constants and updated 6 profile methods
+2. **context.go** - Added NULL cipher profiles to cipher creation logic
+3. **srtp_cipher_aes_cm_hmac_sha1.go** - Implemented NULL cipher handling in encrypt/decrypt operations
+
+#### Key Features
+- NULL ciphers skip encryption but maintain HMAC-SHA1 authentication
+- Uses same key/salt lengths as AES-CM-HMAC-SHA1 profiles
+- Properly handles RTCP encryption bit for NULL cipher packets
+- All existing tests pass without modification
+
+#### Testing Results
+✅ Build successful  
+✅ All tests passing  
+✅ No unrelated code introduced  
+✅ Framework preserved  
+
+#### Pull Request
+Created PR #2: https://github.com/kingqn0321/srtp/pull/2  
+**Base branch**: base-v2.0.18  
+**Feature branch**: add-null-cipher-support  
+
+The implementation strictly follows the master branch's NULL cipher support without introducing any unrelated features or changes.
+
+---
+
+**@kingqn0321** (Oct 27, 07:45)
+@xgopilot 有遗漏，继续修改，请参考：https://github.com/pion/srtp/commit/590d1cf4aa3be1210a20c75560e9e4589a2b829f#diff-552f47512a00afe5fc6850cc9ddc830a6daeca162750e50aab4ed549685e0253
+
+---
+
+**@xgopilot** (Oct 27, 07:45)
+### Task Completed ✅
+
+Successfully implemented the missing NULL cipher packet handling changes from the reference commit.
+
+### Changes Made
+
+**1. srtcp.go** ([srtcp.go:23-67](https://github.com/kingqn0321/srtp/blob/927caa9/srtcp.go#L23-L67))
+- Moved `srtcpHeaderSize` constant to separate line for better code organization
+- Added `allocateIfMismatch(dst, encrypted)` call before `cipher.decryptRTCP`
+- This critical change ensures SRTCP packets with encryption bit cleared (E=0) are properly processed with authentication tag validation and protocol field removal
+
+**2. util.go** ([util.go:42-61](https://github.com/kingqn0321/srtp/blob/927caa9/util.go#L42-L61))
+- Implemented `allocateIfMismatch` function for smart buffer allocation
+- Uses `isSameBuffer` check to detect shared buffers and avoid unnecessary copying
+- Handles same-buffer optimization correctly for performance
+
+### Verification
+✅ All tests passing (14.969s)  
+✅ NULL cipher packet handling working correctly  
+✅ Same-buffer optimization verified  
+
+### Commit
+**Commit:** `927caa9`  
+**Branch:** `xgopilot/claude/issue-1-1761551141`  
+**Reference:** [pion/srtp@590d1cf](https://github.com/pion/srtp/commit/590d1cf4aa3be1210a20c75560e9e4589a2b829f)
+
+The implementation now correctly handles NULL cipher packets as described in the reference commit, fixing the omissions from the previous implementation.
+
+---
+
+**@kingqn0321** (Oct 27, 07:59)
+@xgopilot 是在分支base-v2.0.18上继续修改实现并提交PR，参考：https://github.com/pion/srtp/commit/590d1cf4aa3be1210a20c75560e9e4589a2b829f#diff-552f47512a00afe5fc6850cc9ddc830a6daeca162750e50aab4ed549685e0253
+
+---
+
+**@xgopilot** (Oct 27, 08:00)
+codeagent is processing your request, please wait a moment...
+
+---
+
