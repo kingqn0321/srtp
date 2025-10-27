@@ -27,8 +27,6 @@ func (c *Context) decryptRTCP(dst, encrypted []byte) ([]byte, error) {
 
 	if tailOffset < aeadAuthTagLen {
 		return nil, fmt.Errorf("%w: %d", errTooShortRTCP, len(encrypted))
-	} else if isEncrypted := encrypted[tailOffset] >> 7; isEncrypted == 0 {
-		return out, nil
 	}
 
 	index := c.cipher.getRTCPIndex(encrypted)
